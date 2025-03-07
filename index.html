@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planilha de Vendas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        input {
+            width: 100%;
+            border: none;
+            text-align: center;
+            background: transparent;
+        }
+        .btn {
+            padding: 5px 10px;
+            border: none;
+            cursor: pointer;
+            color: white;
+            margin: 2px;
+        }
+        .btn-edit { background-color: #007bff; }
+        .btn-edit:hover { background-color: #0056b3; }
+        .btn-delete { background-color: #dc3545; }
+        .btn-delete:hover { background-color: #a71d2a; }
+        button#addCliente {
+            margin-top: 10px;
+            padding: 8px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button#addCliente:hover {
+            background-color: #218838;
+        }
+        .moeda {
+            position: absolute;
+            left: 45px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: bold;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Planilha de Vendas</h2>
+    <button id="addCliente">Adicionar Cliente</button>
+
+    <table id="tabela-vendas">
+        <thead>
+            <tr>
+                <th>Nome do Cliente</th>
+                <th>Usuário</th>
+                <th>Data de Vencimento</th>
+                <th>Dias Restantes</th>
+                <th>Valor Pago</th>
+                <th>Plataforma</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Linhas da Tabela -->
+        </tbody>
+    </table>
+
+    <script>
+        let vendas = [];
+
+        // Função para calcular os dias restantes
+        function calcularDiasRestantes(dataVencimento) {
+            const hoje = new Date();
+            const vencimento = new Date(dataVencimento);
+            const diferenca = vencimento - hoje;
+            return Math.ceil(diferenca / (1000 * 60 * 60 * 24));
+        }
+
+        // Função para atualizar a tabela
+        function atualizarTabela() {
+            const tbody = document.querySelector("#tabela-vendas tbody");
+            tbody.innerHTML = ""; // Limpa a tabela
+
+            vendas.forEach((venda, index) => {
+                let tr = document.createElement("tr");
+
+                tr.innerHTML = `
+                    <td><input type="text" value="${venda.nome}" data-index="${index}" data-field="nome" disabled></td>
+                    <td><input type="text" value="${venda.usuario}" data-index="${index}" data-field="usuario" disabled></td>
+                    <td><input type="date" value="${venda.vencimento}" data-index="${index}" data-field="vencimento" disabled></td>
+                    <td>${calcularDiasRestantes(venda.vencimento)}</td>
+                    <td style="position: relative;">
+                        <span class="moeda">R$</span>
+                        <input type="number" class="campo-moeda" value="${venda.valor}" data-index="${index}" data-field="valor">
+                    </td>
+                    <td><input type="text" value="${venda.plataforma}" data-index="${index}" data-field="plataforma" disabled></td>
+                    <td>
+                        <button class="btn btn-edit" onclick="editarLinha(${index}, this)">Editar</button>
+                        <button class="btn btn-delete" onclick="excluirLinha(${index})">Excluir</button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Função para adicionar um cliente
+        function adicionarCliente(cliente) {
+            fetch("salvar_cliente.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(cliente)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // alert("Cliente adicionado/atualizado com sucesso!");
+                    listarClientes(); // Recarrega os clientes
+                } else {
+                    alert("Erro ao salvar o cliente: " + data.error);
+                }
+            });
+        }
+
+        // Função para excluir cliente
+        function excluirCliente(id) {
+            fetch("excluir_cliente.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ id: id })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Cliente excluído com sucesso!");
+                    listarClientes(); // Recarrega os clientes
+                } else {
+                    alert("Erro ao excluir o cliente: " + data.error);
+                }
+            });
+        }
+
+        // Função para buscar todos os clientes
+        function listarClientes() {
+            fetch("obter_clientes.php")
+            .then(response => response.json())
+            .then(data => {
+                vendas = data; // Atualiza a lista de vendas com os dados obtidos
+                atualizarTabela(); // Atualiza a tabela
+            })
+            .catch(error => console.error("Erro ao obter clientes:", error));
+        }
+
+        // Função de edição
+        function editarLinha(index, botao) {
+            let linha = document.querySelectorAll("#tabela-vendas tbody tr")[index];
+            let inputs = linha.querySelectorAll("input");
+
+            if (botao.textContent === "Editar") {
+                inputs.forEach(input => input.removeAttribute("disabled"));
+                botao.textContent = "Salvar";
+                botao.classList.remove("btn-edit");
+                botao.classList.add("btn-save");
+                botao.style.backgroundColor = "#ffc107"; // Amarelo para indicar edição
+            } else {
+                inputs.forEach(input => input.setAttribute("disabled", true));
+                botao.textContent = "Editar";
+                botao.classList.remove("btn-save");
+                botao.classList.add("btn-edit");
+                botao.style.backgroundColor = "#007bff"; // Azul para indicar edição salva
+                
+                // Atualiza o cliente após edição
+                const clienteAtualizado = {
+                    id: vendas[index].id, // Presumindo que você tenha um campo 'id'
+                    nome: inputs[0].value,
+                    usuario: inputs[1].value,
+                    vencimento: inputs[2].value,
+                    valor: inputs[3].value,
+                    plataforma: inputs[4].value
+                };
+                adicionarCliente(clienteAtualizado);
+            }
+        }
+
+        // Função de exclusão
+        function excluirLinha(index) {
+            if (confirm("Tem certeza que deseja excluir este cliente?")) {
+                excluirCliente(vendas[index].id);
+            }
+        }
+
+        // Adicionando cliente
+        document.getElementById("addCliente").addEventListener("click", () => {
+            let novoCliente = {
+                nome: "",
+                usuario: "",
+                vencimento: new Date().toISOString().split("T")[0],
+                valor: 0,
+                plataforma: ""
+            };
+            adicionarCliente(novoCliente); // Chama a função para salvar o novo cliente
+        });
+
+        // Carregar os clientes ao iniciar a página
+        listarClientes();
+
+    </script>
+
+</body>
+</html>
