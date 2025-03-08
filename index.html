@@ -84,7 +84,12 @@
     </table>
 
     <script>
-        let vendas = [];
+        let vendas = JSON.parse(localStorage.getItem("vendas")) || [];
+
+        // Função para salvar no localStorage
+        function salvarNoLocalStorage() {
+            localStorage.setItem("vendas", JSON.stringify(vendas));
+        }
 
         // Função para calcular os dias restantes
         function calcularDiasRestantes(dataVencimento) {
@@ -124,53 +129,18 @@
 
         // Função para adicionar um cliente
         function adicionarCliente(cliente) {
-            fetch("salvar_cliente.php", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(cliente)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    // alert("Cliente adicionado/atualizado com sucesso!");
-                    listarClientes(); // Recarrega os clientes
-                } else {
-                    alert("Erro ao salvar o cliente: " + data.error);
-                }
-            });
+            vendas.push(cliente);
+            salvarNoLocalStorage();
+            atualizarTabela();
         }
 
         // Função para excluir cliente
-        function excluirCliente(id) {
-            fetch("excluir_cliente.php", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ id: id })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert("Cliente excluído com sucesso!");
-                    listarClientes(); // Recarrega os clientes
-                } else {
-                    alert("Erro ao excluir o cliente: " + data.error);
-                }
-            });
-        }
-
-        // Função para buscar todos os clientes
-        function listarClientes() {
-            fetch("obter_clientes.php")
-            .then(response => response.json())
-            .then(data => {
-                vendas = data; // Atualiza a lista de vendas com os dados obtidos
-                atualizarTabela(); // Atualiza a tabela
-            })
-            .catch(error => console.error("Erro ao obter clientes:", error));
+        function excluirLinha(index) {
+            if (confirm("Tem certeza que deseja excluir este cliente?")) {
+                vendas.splice(index, 1);
+                salvarNoLocalStorage();
+                atualizarTabela();
+            }
         }
 
         // Função de edição
@@ -192,22 +162,14 @@
                 botao.style.backgroundColor = "#007bff"; // Azul para indicar edição salva
                 
                 // Atualiza o cliente após edição
-                const clienteAtualizado = {
-                    id: vendas[index].id, // Presumindo que você tenha um campo 'id'
-                    nome: inputs[0].value,
-                    usuario: inputs[1].value,
-                    vencimento: inputs[2].value,
-                    valor: inputs[3].value,
-                    plataforma: inputs[4].value
-                };
-                adicionarCliente(clienteAtualizado);
-            }
-        }
+                vendas[index].nome = inputs[0].value;
+                vendas[index].usuario = inputs[1].value;
+                vendas[index].vencimento = inputs[2].value;
+                vendas[index].valor = inputs[3].value;
+                vendas[index].plataforma = inputs[4].value;
 
-        // Função de exclusão
-        function excluirLinha(index) {
-            if (confirm("Tem certeza que deseja excluir este cliente?")) {
-                excluirCliente(vendas[index].id);
+                salvarNoLocalStorage();
+                atualizarTabela();
             }
         }
 
@@ -220,12 +182,11 @@
                 valor: 0,
                 plataforma: ""
             };
-            adicionarCliente(novoCliente); // Chama a função para salvar o novo cliente
+            adicionarCliente(novoCliente);
         });
 
         // Carregar os clientes ao iniciar a página
-        listarClientes();
-
+        atualizarTabela();
     </script>
 
 </body>
