@@ -59,12 +59,21 @@
             font-weight: bold;
             color: #333;
         }
-        .comprovante-img {
-            width: 50px;
-            height: 50px;
-            object-fit: cover;
+        .comprovante-container img {
+            max-width: 50px;
+            max-height: 50px;
             cursor: pointer;
         }
+        .comprovante-container a {
+            text-decoration: none;
+            color: blue;
+        }
+        .checkbox-cell {
+            font-weight: bold;
+            padding: 10px;
+        }
+        .nao { background-color: red; color: white; cursor: pointer; }
+        .sim { background-color: yellow; color: black; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -82,6 +91,9 @@
                 <th>Valor Pago</th>
                 <th>Plataforma</th>
                 <th>Comprovante</th>
+                <th>Observação</th>
+                <th>Renovação</th>
+                <th>Remarketing</th>
                 <th>Ações</th>
             </tr>
         </thead>
@@ -120,34 +132,23 @@
                         <input type="number" class="campo-moeda" value="${venda.valor}" data-index="${index}" data-field="valor">
                     </td>
                     <td><input type="text" value="${venda.plataforma}" data-index="${index}" data-field="plataforma" disabled></td>
-                    <td>
-                        ${venda.comprovante ? `<img src="${venda.comprovante}" class="comprovante-img" onclick="exibirImagem('${venda.comprovante}')">` : ""}
-                        <input type="file" class="upload-comprovante" data-index="${index}" accept="image/*">
+                    <td class="comprovante-container">
+                        ${venda.comprovante ? 
+                            (venda.comprovante.includes("data:image") ? 
+                                `<img src="${venda.comprovante}" alt="Comprovante" onclick="window.open('${venda.comprovante}', '_blank')">` 
+                                : `<a href="${venda.comprovante}" target="_blank">Baixar PDF</a>`
+                            ) 
+                            : `<input type="file" accept="image/*,application/pdf" onchange="uploadComprovante(event, ${index})">`}
                     </td>
+                    <td><input type="text" value="${venda.observacao}" data-index="${index}" data-field="observacao"></td>
+                    <td class="checkbox-cell ${venda.renovacao ? 'sim' : 'nao'}" onclick="toggleCheckbox(${index}, 'renovacao')">${venda.renovacao ? 'Sim' : 'Não'}</td>
+                    <td class="checkbox-cell ${venda.remarketing ? 'sim' : 'nao'}" onclick="toggleCheckbox(${index}, 'remarketing')">${venda.remarketing ? 'Sim' : 'Não'}</td>
                     <td>
-                        <button class="btn btn-edit" onclick="editarLinha(${index}, this)">Editar</button>
                         <button class="btn btn-delete" onclick="excluirLinha(${index})">Excluir</button>
                     </td>
                 `;
 
                 tbody.appendChild(tr);
-            });
-
-            // Adicionar evento de mudança nos inputs de arquivo
-            document.querySelectorAll(".upload-comprovante").forEach(input => {
-                input.addEventListener("change", function () {
-                    let index = this.getAttribute("data-index");
-                    let file = this.files[0];
-                    if (file) {
-                        let reader = new FileReader();
-                        reader.onload = function (e) {
-                            vendas[index].comprovante = e.target.result;
-                            salvarNoLocalStorage();
-                            atualizarTabela();
-                        };
-                        reader.readAsDataURL(file);
-                    }
-                });
             });
         }
 
@@ -165,28 +166,23 @@
             }
         }
 
-        function editarLinha(index, botao) {
-            let linha = document.querySelectorAll("#tabela-vendas tbody tr")[index];
-            let inputs = linha.querySelectorAll("input:not(.upload-comprovante)");
-
-            if (botao.textContent === "Editar") {
-                inputs.forEach(input => input.removeAttribute("disabled"));
-                botao.textContent = "Salvar";
-                botao.style.backgroundColor = "#ffc107"; 
-            } else {
-                inputs.forEach(input => input.setAttribute("disabled", true));
-                botao.textContent = "Editar";
-                botao.style.backgroundColor = "#007bff"; 
-
-                vendas[index].nome = inputs[0].value;
-                vendas[index].usuario = inputs[1].value;
-                vendas[index].vencimento = inputs[2].value;
-                vendas[index].valor = inputs[3].value;
-                vendas[index].plataforma = inputs[4].value;
-
-                salvarNoLocalStorage();
-                atualizarTabela();
+        function uploadComprovante(event, index) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    vendas[index].comprovante = e.target.result;
+                    salvarNoLocalStorage();
+                    atualizarTabela();
+                };
+                reader.readAsDataURL(file);
             }
+        }
+
+        function toggleCheckbox(index, campo) {
+            vendas[index][campo] = !vendas[index][campo];
+            salvarNoLocalStorage();
+            atualizarTabela();
         }
 
         document.getElementById("addCliente").addEventListener("click", () => {
@@ -196,15 +192,13 @@
                 vencimento: new Date().toISOString().split("T")[0],
                 valor: 0,
                 plataforma: "",
-                comprovante: ""
+                comprovante: "",
+                observacao: "",
+                renovacao: false,
+                remarketing: false
             };
             adicionarCliente(novoCliente);
         });
-
-        function exibirImagem(src) {
-            let novaJanela = window.open("");
-            novaJanela.document.write(`<img src="${src}" style="max-width:100%;">`);
-        }
 
         atualizarTabela();
     </script>
