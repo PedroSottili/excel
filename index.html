@@ -53,7 +53,7 @@
         }
         .moeda {
             position: absolute;
-            left: 45px;
+            left: 5px;
             top: 50%;
             transform: translateY(-50%);
             font-weight: bold;
@@ -72,8 +72,8 @@
             font-weight: bold;
             padding: 10px;
         }
-        .nao { background-color: red; color: white; cursor: pointer; }
-        .sim { background-color: yellow; color: black; cursor: pointer; }
+        .nao { background-color: red; color: white; }
+        .sim { background-color: yellow; color: black; }
     </style>
 </head>
 <body>
@@ -129,7 +129,7 @@
                     <td>${calcularDiasRestantes(venda.vencimento)}</td>
                     <td style="position: relative;">
                         <span class="moeda">R$</span>
-                        <input type="number" class="campo-moeda" value="${venda.valor}" data-index="${index}" data-field="valor">
+                        <input type="number" class="campo-moeda" value="${venda.valor}" data-index="${index}" data-field="valor" disabled>
                     </td>
                     <td><input type="text" value="${venda.plataforma}" data-index="${index}" data-field="plataforma" disabled></td>
                     <td class="comprovante-container">
@@ -140,10 +140,11 @@
                             ) 
                             : `<input type="file" accept="image/*,application/pdf" onchange="uploadComprovante(event, ${index})">`}
                     </td>
-                    <td><input type="text" value="${venda.observacao}" data-index="${index}" data-field="observacao"></td>
+                    <td><input type="text" value="${venda.observacao}" data-index="${index}" data-field="observacao" disabled></td>
                     <td class="checkbox-cell ${venda.renovacao ? 'sim' : 'nao'}" onclick="toggleCheckbox(${index}, 'renovacao')">${venda.renovacao ? 'Sim' : 'Não'}</td>
                     <td class="checkbox-cell ${venda.remarketing ? 'sim' : 'nao'}" onclick="toggleCheckbox(${index}, 'remarketing')">${venda.remarketing ? 'Sim' : 'Não'}</td>
                     <td>
+                        <button class="btn btn-edit" onclick="editarLinha(${index}, this)">Editar</button>
                         <button class="btn btn-delete" onclick="excluirLinha(${index})">Excluir</button>
                     </td>
                 `;
@@ -152,10 +153,22 @@
             });
         }
 
-        function adicionarCliente(cliente) {
-            vendas.push(cliente);
-            salvarNoLocalStorage();
-            atualizarTabela();
+        function editarLinha(index, botao) {
+            let inputs = document.querySelectorAll(`[data-index="${index}"]`);
+            let editando = inputs[0].disabled === false;
+
+            inputs.forEach(input => input.disabled = editando);
+            botao.textContent = editando ? "Editar" : "Salvar";
+
+            if (editando) {
+                vendas[index].nome = inputs[0].value;
+                vendas[index].usuario = inputs[1].value;
+                vendas[index].vencimento = inputs[2].value;
+                vendas[index].valor = inputs[3].value;
+                vendas[index].plataforma = inputs[4].value;
+                vendas[index].observacao = inputs[5].value;
+                salvarNoLocalStorage();
+            }
         }
 
         function excluirLinha(index) {
@@ -163,19 +176,6 @@
                 vendas.splice(index, 1);
                 salvarNoLocalStorage();
                 atualizarTabela();
-            }
-        }
-
-        function uploadComprovante(event, index) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    vendas[index].comprovante = e.target.result;
-                    salvarNoLocalStorage();
-                    atualizarTabela();
-                };
-                reader.readAsDataURL(file);
             }
         }
 
@@ -197,7 +197,9 @@
                 renovacao: false,
                 remarketing: false
             };
-            adicionarCliente(novoCliente);
+            vendas.push(novoCliente);
+            salvarNoLocalStorage();
+            atualizarTabela();
         });
 
         atualizarTabela();
