@@ -59,6 +59,12 @@
             font-weight: bold;
             color: #333;
         }
+        .comprovante-img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -75,23 +81,21 @@
                 <th>Dias Restantes</th>
                 <th>Valor Pago</th>
                 <th>Plataforma</th>
+                <th>Comprovante</th>
                 <th>Ações</th>
             </tr>
         </thead>
-        <tbody>
-            <!-- Linhas da Tabela -->
+        <tbody> 
         </tbody>
     </table>
 
     <script>
         let vendas = JSON.parse(localStorage.getItem("vendas")) || [];
 
-        // Função para salvar no localStorage
         function salvarNoLocalStorage() {
             localStorage.setItem("vendas", JSON.stringify(vendas));
         }
 
-        // Função para calcular os dias restantes
         function calcularDiasRestantes(dataVencimento) {
             const hoje = new Date();
             const vencimento = new Date(dataVencimento);
@@ -99,10 +103,9 @@
             return Math.ceil(diferenca / (1000 * 60 * 60 * 24));
         }
 
-        // Função para atualizar a tabela
         function atualizarTabela() {
             const tbody = document.querySelector("#tabela-vendas tbody");
-            tbody.innerHTML = ""; // Limpa a tabela
+            tbody.innerHTML = "";
 
             vendas.forEach((venda, index) => {
                 let tr = document.createElement("tr");
@@ -118,6 +121,10 @@
                     </td>
                     <td><input type="text" value="${venda.plataforma}" data-index="${index}" data-field="plataforma" disabled></td>
                     <td>
+                        ${venda.comprovante ? `<img src="${venda.comprovante}" class="comprovante-img" onclick="exibirImagem('${venda.comprovante}')">` : ""}
+                        <input type="file" class="upload-comprovante" data-index="${index}" accept="image/*">
+                    </td>
+                    <td>
                         <button class="btn btn-edit" onclick="editarLinha(${index}, this)">Editar</button>
                         <button class="btn btn-delete" onclick="excluirLinha(${index})">Excluir</button>
                     </td>
@@ -125,16 +132,31 @@
 
                 tbody.appendChild(tr);
             });
+
+            // Adicionar evento de mudança nos inputs de arquivo
+            document.querySelectorAll(".upload-comprovante").forEach(input => {
+                input.addEventListener("change", function () {
+                    let index = this.getAttribute("data-index");
+                    let file = this.files[0];
+                    if (file) {
+                        let reader = new FileReader();
+                        reader.onload = function (e) {
+                            vendas[index].comprovante = e.target.result;
+                            salvarNoLocalStorage();
+                            atualizarTabela();
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            });
         }
 
-        // Função para adicionar um cliente
         function adicionarCliente(cliente) {
             vendas.push(cliente);
             salvarNoLocalStorage();
             atualizarTabela();
         }
 
-        // Função para excluir cliente
         function excluirLinha(index) {
             if (confirm("Tem certeza que deseja excluir este cliente?")) {
                 vendas.splice(index, 1);
@@ -143,25 +165,19 @@
             }
         }
 
-        // Função de edição
         function editarLinha(index, botao) {
             let linha = document.querySelectorAll("#tabela-vendas tbody tr")[index];
-            let inputs = linha.querySelectorAll("input");
+            let inputs = linha.querySelectorAll("input:not(.upload-comprovante)");
 
             if (botao.textContent === "Editar") {
                 inputs.forEach(input => input.removeAttribute("disabled"));
                 botao.textContent = "Salvar";
-                botao.classList.remove("btn-edit");
-                botao.classList.add("btn-save");
-                botao.style.backgroundColor = "#ffc107"; // Amarelo para indicar edição
+                botao.style.backgroundColor = "#ffc107"; 
             } else {
                 inputs.forEach(input => input.setAttribute("disabled", true));
                 botao.textContent = "Editar";
-                botao.classList.remove("btn-save");
-                botao.classList.add("btn-edit");
-                botao.style.backgroundColor = "#007bff"; // Azul para indicar edição salva
-                
-                // Atualiza o cliente após edição
+                botao.style.backgroundColor = "#007bff"; 
+
                 vendas[index].nome = inputs[0].value;
                 vendas[index].usuario = inputs[1].value;
                 vendas[index].vencimento = inputs[2].value;
@@ -173,19 +189,23 @@
             }
         }
 
-        // Adicionando cliente
         document.getElementById("addCliente").addEventListener("click", () => {
             let novoCliente = {
                 nome: "",
                 usuario: "",
                 vencimento: new Date().toISOString().split("T")[0],
                 valor: 0,
-                plataforma: ""
+                plataforma: "",
+                comprovante: ""
             };
             adicionarCliente(novoCliente);
         });
 
-        // Carregar os clientes ao iniciar a página
+        function exibirImagem(src) {
+            let novaJanela = window.open("");
+            novaJanela.document.write(`<img src="${src}" style="max-width:100%;">`);
+        }
+
         atualizarTabela();
     </script>
 
